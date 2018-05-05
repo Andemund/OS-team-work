@@ -11,14 +11,20 @@
 */
 
 //#include "stdafx.h"
-#include "File_management.h"
+
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include<string.h>
 #include<iomanip>
 #include<math.h>
+#include<list> 
+#include <utility>  
+#include<map>
+#include "File_management.h"
 using namespace std;
+
+
 
 
 //functions
@@ -141,7 +147,7 @@ void function()
 		}
 		else if (strcmp(ch, "-drop folder") == 0)
 		{
-			//	new_Folder();
+			//	
 		}
 		else if (strcmp(ch, "-drop file") == 0)
 		{
@@ -218,7 +224,7 @@ void new_File()
 		cout << "Operation failed." << endl;
 		return;
 	}
-
+	cout << "here we are" << endll;
 	//磁盘还有剩余空间
 	File * newf;
 	newf = get_file_info();
@@ -243,6 +249,8 @@ void new_File()
 	//剩余空间可以存放该文件
 	//add the information into the index
 	//find the physical space
+
+	cout << "herre" << endl;
 
 	
 	if (org_method == 1)//link
@@ -376,10 +384,13 @@ File * get_file_info()
 	cin >> temp->belong;
 	cin.clear();
 	cin.sync();
+	cout << "ininin" << endl;
 	cout << "Please input the size of the file:";
 	cin >> temp->fsize;
 	cin.clear();
 	cin.sync();
+
+	
 
 	if (temp->fsize >= Remain_M)
 	{
@@ -599,7 +610,8 @@ void delete_block(File * f)
 
 //-----------------------------------------------------------------------------------------
 
-void demo() {
+void demo() 
+{
 	Folder * p1 = (struct Folder *)malloc(sizeof(struct Folder));
 	p1->in_file = (struct File *)malloc(sizeof(struct File));
 	p1->in_folder = (struct Folder *)malloc(sizeof(struct Folder));
@@ -730,7 +742,7 @@ void demo() {
 }
 
 
-//查找路径函数
+//查找路径函数 
 Folder * Located(char position[])
 {
 	int i = 0, j = 0, level = -1;   //level表示第几级目录，0则为根目录
@@ -1091,7 +1103,24 @@ void Modify_File(File * f)
 			cin >> a;
 			if (a != ".")
 			{
+				int b = ceil(a / BLOCKSIZE) - ceil(f->fsize / BLOCKSIZE);
+				File * d;
+				for (d = f; d->piece != NULL; d = d->piece)
+				{
+
+				}
+				if (b >= 1)
+				{
+					Available * c;
+					for (int i = b; i > 0; i--)
+					{
+						c = init_available->next;
+						f->piece
+
+					}
+				}
 				f->fsize = double(a);
+				
 			}
 			cout << "File type:" << endl;
 			cin >> a;
