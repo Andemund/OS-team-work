@@ -20,8 +20,13 @@
 #include<math.h>
 #include<Windows.h>
 #include<map>
+
+#include<direct.h> 
 #include "shellapi.h"
 using namespace std;
+
+
+
 
 Available * find_disk_space();
 void new_File();
@@ -37,8 +42,8 @@ void split_file_link(File *, Available *);
 void change_prev_folder_size(Folder *, const char *, File *);
 Folder * Located(char position[]);
 void demo();
-void Print(Folder * p1, File * p2);
-//void show_disk_usage();
+void Print(Folder * p1);// , File * p2);
+						//void show_disk_usage();
 
 void init_block_space();
 void show_current_block();
@@ -46,7 +51,7 @@ void allocate_block(File *);
 void recover_link(File *);
 void recover_index(File *);
 void delete_File();
-void delete_File_Index(File * );
+void delete_File_Index(File *);
 
 File * find_name(Folder * ptr, char contact[]);
 void find_type(Folder * ptr, char contact[]);
@@ -62,13 +67,19 @@ double Fsize(Folder * ptr);
 void Order_by_size(char arr[]);
 void Order(Folder * ptr, int op);
 
+void re_drop_folder(Folder * f);
+void allocate_demo(Folder * a);
+void drop_folder();
+void Modify_Folder();
+void Modify_File();
+
 
 int main()
 {
 	Folder * ptr1;
 	File * ptr2;
 	demo();
-
+	//system("rd D:\\我的电脑\\操作系统\\hello");
 	cout << "请选择磁盘空间分配方式：1-链接，2-索引，3-连续：" << endl;
 	cin >> org_method;
 	getchar();
@@ -79,7 +90,7 @@ int main()
 		init_block_space();
 		show_current_block();
 	}
-	else 
+	else
 	{
 		cout << "非法输入" << endl;
 		return 0;
@@ -95,6 +106,7 @@ void function()
 {
 	char instruct[300];
 	char ch[100];
+	memset(instruct, 0, 300);
 	cin.clear();
 	cin.sync();
 	cout << "D:/我的电脑>";
@@ -107,22 +119,21 @@ void function()
 	{
 		int j = 0;
 		memset(ch, 0, sizeof(ch));
-		for (int i = 0; instruct[i] != NULL; i++)
+
+		for (int i = 0; instruct[i] != NULL; i++, j++)
 		{
 			//ch[]存储输入的指令前缀
 			if (instruct[i] != ' ') {
 				ch[j] = instruct[i];
-				j++;
 			}
 			else {
 				if (strcmp(ch, "cd") != 0) {
 					break;
 				}
 				else {
-					strcat_s(ch, " ");
-					j++;
+					strcpy(ch, instruct);
+					break;
 				}
-
 			}
 		}
 
@@ -131,12 +142,12 @@ void function()
 			cout << endl;
 			cout << "	-cd		显示当前目录的名称或将其更改" << endl;
 			cout << "	-check		查看所有目录结构" << endl;
-			cout << "	-drop file	删除文件" << endl;
-			cout << "	-drop folder	删除文件夹" << endl;
+			cout << "	-dropfile	删除文件" << endl;
+			cout << "	-dropfolder	删除文件夹" << endl;
 			cout << "	-find		查找" << endl;
 			cout << "	-help		帮助" << endl;
-			cout << "	-new file	创建文件" << endl;
-			cout << "	-new folder	创建文件夹" << endl;
+			cout << "	-newfile	创建文件" << endl;
+			cout << "	-newfolder	创建文件夹" << endl;
 			cout << "	-open		打开文件" << endl;
 			cout << "	-order		按照文件大小排序" << endl;
 			cout << endl;
@@ -165,22 +176,22 @@ void function()
 			}
 		}
 		//创建新文件
-		else if (strcmp(ch, "-new file") == 0)
+		else if (strcmp(ch, "-newfile") == 0)
 		{
 			new_File();
 		}
 		//创建新文件夹
-		else if (strcmp(ch, "-new folder") == 0)
+		else if (strcmp(ch, "-newfolder") == 0)
 		{
-			//	new_Folder();
+			get_folder_info();
 		}
 		//删除文件夹
-		else if (strcmp(ch, "-drop folder") == 0)
+		else if (strcmp(ch, "-dropfolder") == 0)
 		{
-			//	new_Folder();
+			drop_folder();
 		}
 		//删除文件
-		else if (strcmp(ch, "-drop file") == 0)
+		else if (strcmp(ch, "-dropfile") == 0)
 		{
 			delete_File();
 		}
@@ -188,7 +199,7 @@ void function()
 		else if (strcmp(ch, "-check") == 0)
 		{
 			tab = 0;
-			Print(current_ptr, init_file);
+			Print(current_ptr);//, init_file);
 		}
 		//打开文件
 		else if (strcmp(ch, "-open") == 0)
@@ -212,7 +223,6 @@ void function()
 		else
 		{
 			int p = 0, i = 0;   //判断标志
-
 								//输入 cd 文件名 进入当前文件夹的判断
 			char cd_op[20][30];
 			char m[30];
@@ -230,6 +240,7 @@ void function()
 			for (int j = 0; strcmp(cd_op[j], "") != 0; j++) {
 				if (strcmp(ch, cd_op[j]) == 0)
 				{
+
 					//定位current_ptr当前指针
 					for (current_ptr = current_ptr->in_folder; current_ptr != NULL; )
 					{
@@ -256,6 +267,7 @@ void function()
 		}
 		cout << endl;
 		memset(ch, 0, sizeof(ch));
+		memset(instruct, 0, sizeof(instruct));
 		cout << "D:";
 		print_current_ptr(current_ptr);
 		cout << ">";
@@ -267,6 +279,9 @@ void function()
 
 }
 
+
+//------------------------通用部分 begin-----------------------------
+
 //创建新文件
 void new_File()
 {
@@ -274,8 +289,8 @@ void new_File()
 	//磁盘已满
 	if (Remain_M <= 0)
 	{
-		cout << "Insufficient disk space." << endl;
-		cout << "Operation failed." << endl;
+		cout << "磁盘空间不足" << endl;
+		cout << "操作失败" << endl;
 		return;
 	}
 
@@ -283,22 +298,24 @@ void new_File()
 	File * newf;
 	newf = get_file_info();
 
-	
-	//同文件夹内是否有同名文件存在
-	if (already_exist(newf->return_to_pre, newf))
-	{
-		cout << "That file is already exist." << endl;
-		cout << "Operation failed." << endl;
-		return;
-	}
-
 	//文件大小大于剩余空间
 	if (newf == NULL)
 	{
-		cout << "Insufficient disk space." << endl;
-		cout << "Operation failed." << endl;
+		//cout << "Insufficient disk space." << endl;
+		cout << "操作失败" << endl;
 		return;
 	}
+
+
+	//同文件夹内是否有同名文件存在
+	if (already_exist(newf->return_to_pre, newf))
+	{
+		cout << "同名文件已经存在" << endl;
+		cout << "操作失败" << endl;
+		return;
+	}
+
+
 
 
 	//物理地址逻辑地址
@@ -308,13 +325,13 @@ void new_File()
 		Available * maxpiece = find_disk_space();
 		if (maxpiece != NULL)
 		{
-			
-			split_file_link(newf, maxpiece);
+
+		split_file_link(newf, maxpiece);
 		}
 		else
 		{
-			cout << "Operation failed." << endl;
-			return;
+		cout << "Operation failed." << endl;
+		return;
 		}
 		*/
 		allocate_link(newf);
@@ -330,8 +347,8 @@ void new_File()
 	}
 	else
 	{
-		cout << "allocating method is not exist." << endl;
-		cout << "Operation failed." << endl;
+		cout << "error" << endl;
+		cout << "操作失败" << endl;
 		return;
 	}
 	//将文件加入对应文件夹下
@@ -339,14 +356,25 @@ void new_File()
 
 	Remain_M = Remain_M - ceil(newf->fsize);
 	show_current_block();
+
+	char lo[100];
+	strcpy(lo, Located_change(newf->location));
+	//cout << newf->location << endl;
+	strcat_s(lo, "\\");
+	strcat_s(lo, newf->name);
+
+	FILE * tempacufile = fopen(lo, "w+");
+
+	if (tempacufile != NULL)
+	{
+		cout << "实际文件创建成功" << endl;
+	}
 	cout << "当前剩余空间：" << Remain_M << endl;
-	cout << "New file created." << endl;
+	cout << "新文件创建成功" << endl;
 	//Print(init_folder, init_file);
 	return;
 }
 
-
-//------------------------通用部分 begin-----------------------------
 //读取新建文件信息    check
 File * get_file_info()
 {
@@ -359,6 +387,13 @@ File * get_file_info()
 	cin.sync();
 	//调用相关修改文件夹索引的函数
 	Folder * a = Located(temp->location);
+	//cout << a->name << endl;
+	if (a == NULL)
+	{
+		cout << "错误路径" << endl;
+		cout << "操作失败" << endl;
+		return NULL;
+	}
 	temp->return_to_pre = a;
 	cout << a << endl;
 	cout << "新建文件名称：";
@@ -376,6 +411,7 @@ File * get_file_info()
 
 	if (temp->fsize >= Remain_M)
 	{
+		//cout << "hello" << endl;
 		return NULL;
 	}
 
@@ -492,11 +528,66 @@ void init_block_space()
 	empty_block_begin = INDEXSPACE / BLOCKSIZE + 1;
 	empty_block_end = BLOCKNUM;
 
+	allocate_demo(init_folder);
+
 	cout << "空闲块起始：" << empty_block_begin << endl;
 	cout << "空闲块结束：" << empty_block_end << endl;
 	return;
 }
 
+//给demo中文件分配空间
+void allocate_demo(Folder * a)
+{
+	//cout << a->name << endl;
+	//Folder * a = init_folder;
+	File * b;
+	if (org_method == 1)
+	{
+		while (a != NULL)
+		{
+			b = a->in_file;
+			while (b != NULL)
+			{
+				allocate_link(b);
+				//cout << b->name << "	" << b->fsize << endl;
+				b = b->next;
+			}
+			if (a->in_folder != NULL)
+			{
+				allocate_demo(a->in_folder);
+			}
+			a = a->next;
+
+		}
+		return;
+	}
+	else if (org_method == 2)
+	{
+		while (a != NULL)
+		{
+			b = a->in_file;
+			while (b != NULL)
+			{
+				allocate_index(b);
+				b = b->next;
+			}
+			allocate_demo(a->in_folder);
+			a = a->next;
+		}
+		return;
+
+	}
+	else if (org_method == 3)
+	{
+		return;
+	}
+	else
+	{
+		cout << "error" << endl;
+		return;
+	}
+
+}
 
 //矢量图的形式展示当前磁盘占用情况	check
 void show_current_block()
@@ -518,13 +609,20 @@ void get_folder_info()
 {
 	Folder * temp = new Folder;
 	char t[50];
+	memset(t, 0, sizeof(t));
 	Folder * a;	//the last folder in the uplevel folder
 	Folder * b;
 	cout << "新建文件夹路径：" << endl;
 	cin >> t;
 	//调用相关修改文件夹索引的函数
 	a = Located(t);
-	cout << a->name << endl;
+	if (a == NULL)
+	{
+		cout << "错误路径" << endl;
+		cout << "操作失败" << endl;
+		return;
+	}
+	//cout << a->name << endl;
 	temp->return_to_pre = a;
 	b = a->in_folder;
 	if (b == NULL)
@@ -552,6 +650,7 @@ void get_folder_info()
 	cin.clear();
 	cin.sync();
 
+
 	return;
 }
 
@@ -560,6 +659,7 @@ void delete_File()
 {
 	//call the function
 	char p[50];
+	memset(p, 0, sizeof(p));
 	char n[20];
 	cout << "文件路径：" << endl;
 	cin >> p;
@@ -569,8 +669,20 @@ void delete_File()
 	cin >> n;
 	//调用相关修改文件夹索引的函数
 	Folder * a = Located(p);
-	cout << a->name;
+	if (a == NULL)
+	{
+		cout << "错误路径" << endl;
+		cout << "操作失败" << endl;
+		return;
+	}
+	//cout << a->name;
 	File * deletef = find_name(a, n);
+	if (deletef == NULL)
+	{
+		cout << "文件不存在" << endl;
+		cout << "操作失败" << endl;
+		return;
+	}
 	cout << deletef->name << endl;
 
 	if (org_method == 1)//link
@@ -587,8 +699,7 @@ void delete_File()
 	}
 	else
 	{
-		cout << "drop method is not exist." << endl;
-		cout << "Operation failed." << endl;
+		cout << "操作失败" << endl;
 		return;
 	}
 
@@ -597,8 +708,18 @@ void delete_File()
 
 	Remain_M = Remain_M + ceil(deletef->fsize);
 	show_current_block();
+	char lo[100];
+	strcpy(lo, Located_change(deletef->location));
+	//cout << newf->location << endl;
+	strcat_s(lo, "\\");
+	strcat_s(lo, deletef->name);
+
+	if (DeleteFileA(lo))
+	{
+		cout << "实际文件已删除" << endl;
+	}
 	cout << "当前剩余空间：" << Remain_M << endl;
-	cout << "File dropped." << endl;
+	cout << "文件已删除" << endl;
 }
 
 
@@ -625,6 +746,305 @@ void delete_File_Index(File * f)
 	return;
 }
 
+//删除文件夹	check
+void drop_folder()
+{
+	Folder * temp = new Folder;
+	char t[50];
+	memset(t, 0, sizeof(t));
+	Folder * a;
+	Folder * b;
+	cout << "文件夹路径：" << endl;
+	cin >> t;
+	//调用相关修改文件夹索引的函数
+	a = Located(t);
+
+	if (a == NULL)
+	{
+		cout << "错误路径" << endl;
+		cout << "操作失败" << endl;
+		return;
+	}
+	//cout << a->name << endl;
+	cout << "文件夹名称：" << endl;
+	cin >> t;
+	//cout << a->name << endl;
+	if (strcmp(a->in_folder->name, t) == 0)
+	{
+		b = a->in_folder;
+		//	cout << b->name << endl;
+	}
+	else
+	{
+		b = a->in_folder;
+		while (strcmp(b->name, t) != 0)//未找到
+		{
+			b = b->next;
+
+		}
+		if (b->next == NULL && (strcmp(b->name, t) != 0))
+		{
+			cout << "文件夹不存在" << endl;
+			cout << "操作失败" << endl;
+			return;
+		}
+
+	}
+	re_drop_folder(b);
+	cout << b->name << "文件夹删除成功" << endl;
+	return;
+}
+
+//递归删除文件夹
+void re_drop_folder(Folder * f)
+{
+	if (f->in_folder == NULL)
+	{
+		File * t = f->in_file;
+		while (t != NULL)
+		{
+			if (org_method == 1)
+			{
+				recover_link(t);
+			}
+			else if (org_method == 2)
+			{
+				recover_index(t);
+			}
+			else if (org_method == 3)
+			{
+				//undo
+			}
+			else
+			{
+				cout << "error" << endl;
+				return;
+			}
+			t = t->next;
+		}
+		Folder * m = f->return_to_pre;
+		Folder * n = m->in_folder;
+		if (strcmp(n->name, f->name) == 0)
+		{
+			m->in_folder = f->next;
+			cout << f->name << "已删除" << endl;
+			return;
+		}
+
+		while (n != NULL && strcmp(n->next->name, f->name) != 0)
+		{
+			n = n->next;
+		}
+		if (n == NULL)
+		{
+			cout << "error" << endl;
+			return;
+		}
+		else
+		{
+			n->next = f->next;
+			//		cout << f->name << "已删除" << endl;
+			return;
+		}
+
+	}
+	else
+	{
+		f = f->in_folder;
+		while (f != NULL)
+		{
+			re_drop_folder(f);
+			f = f->next;
+		}
+	}
+	return;
+}
+
+
+//文件夹修改路径名称
+void Modify_Folder()
+{
+	Folder * f;
+	int op;
+	char b[50], c[20];
+	cout << "待修改文件夹路径：" << endl;
+	cin.clear();
+	cin.sync();
+	cin >> b;
+	cin.clear();
+	cin.sync();
+	Folder * t0 = Located(b);
+	if (t0 == NULL)
+	{
+		cout << "错误路径" << endl;
+		cout << "操作失败" << endl;
+		return;
+	}
+	cout << "待修改文件夹名称：" << endl;
+	cin >> c;
+	cin.clear();
+	cin.sync();
+	Folder * ta = t0->in_folder;
+	if (strcmp(ta->name, c) == 0)
+	{
+		//是上层文件夹中第一个文件夹
+		f = ta;
+		op = 1;
+	}
+	else
+	{
+		while (ta->next != NULL && strcmp(ta->next->name, c) != 0)
+		{
+			ta = ta->next;
+		}
+		if (ta->next == NULL && strcmp(ta->next->name, c) != 0)
+		{
+			cout << "文件不存在" << endl;
+			cout << "操作失败" << endl;
+			return;
+		}
+		else
+		{
+			f = ta->next;
+			op = 2;
+
+		}
+	}
+
+	char a[50];
+	char d[10] = ".";
+	char e[20];
+	cout << "不修改的项请输入." << endl;
+	cout << "移动目标路径：" << endl;
+	cin.clear();
+	cin.sync();
+	cin >> a;
+	cin.clear();
+	cin.sync();
+	if (a != d)
+	{
+		Folder * t1 = Located(a);
+		Folder * n1;
+		if (t1 == NULL)
+		{
+			cout << "错误路径" << endl;
+			cout << "操作失败" << endl;
+			return;
+		}
+		n1 = f->return_to_pre;
+		while (n1 != NULL)
+		{
+			n1->fsize = n1->fsize - f->fsize;
+			n1 = n1->return_to_pre;
+		}
+		n1 = t1;
+		while (n1 != NULL)
+		{
+			n1->fsize = n1->fsize + f->fsize;
+			n1 = n1->return_to_pre;
+		}
+		n1->fsize = n1->fsize + f->fsize;
+		f->return_to_pre = t1;
+
+		if (op == 1)
+		{
+			t0->in_folder = f->next;
+		}
+		else if (op == 2)
+		{
+			ta->next = f->next;
+		}
+	}
+
+	cout << "新文件夹名称：" << endl;
+	cin.clear();
+	cin.sync();
+	cin >> e;
+	cin.clear();
+	cin.sync();
+	if (e != d)
+	{
+		strcpy(f->name, e);
+	}
+
+	cout << "文件夹更新完成" << endl;
+
+	return;
+}
+
+//文件修改路径名称
+void Modify_File()
+{
+	File * f;
+	Folder * p, *q;
+	char a[50], b[20];
+	char c[10] = ".";
+	cout << "待修改文件路径：" << endl;
+	cin >> a;
+	p = Located(a);
+	if (p == NULL)
+	{
+		cout << "路径错误" << endl;
+		cout << "操作失败" << endl;
+		return;
+	}
+	cout << "待修改文件名称：" << endl;
+	cin >> b;
+	f = find_name(p, b);
+	if (f == NULL)
+	{
+		cout << "文件不存在" << endl;
+		cout << "操作失败" << endl;
+		return;
+	}
+	cout << "不修改的项输入." << endl;
+
+	cout << "新文件名称：" << endl;
+	cin >> b;
+	if (b != c)
+	{
+		strcpy(f->name, b);
+	}
+	cout << "新文件路径：" << endl;
+	cin >> b;
+	if (b != c)
+	{
+		q = Located(b);
+		if (q == NULL)
+		{
+			cout << "路径错误" << endl;
+			cout << "操作失败" << endl;
+			return;
+		}
+		File * l = q->in_file;
+		if (l == NULL)
+		{
+			q->in_file = f;
+		}
+		else
+		{
+			while (l->next != NULL)
+			{
+				l = l->next;
+			}
+			l->next = f;
+			f->next = NULL;
+		}
+
+		while (p != NULL)
+		{
+			p->fsize = p->fsize - f->fsize;
+			p = p->return_to_pre;
+		}
+		while (q->return_to_pre != NULL)
+		{
+			q->fsize = q->fsize + f->fsize;
+			q = q->return_to_pre;
+		}
+		f->return_to_pre = q;
+	}
+	return;
+}
 
 //------------------------通用部分 end-----------------------------
 
@@ -633,15 +1053,15 @@ void delete_File_Index(File * f)
 //show current disk usage
 /*void show_disk_usage()
 {
-	cout << "Disk usage:" << endl;
-	for (int i = 0; i < Disk_M; i++)
-	{
-		cout << disk_block[i] << " ";
-		if (i % 16 == 15)
-		{
-			cout << endl;
-		}
-	}
+cout << "Disk usage:" << endl;
+for (int i = 0; i < Disk_M; i++)
+{
+cout << disk_block[i] << " ";
+if (i % 16 == 15)
+{
+cout << endl;
+}
+}
 }
 */
 
@@ -737,17 +1157,25 @@ Available * find_disk_space()
 //连接方式下分配物理空间	check
 void allocate_link(File * f)
 {
+
 	int i = 0;
 	f->phy_loc = empty_block_begin;
+	//cout << empty_block_begin << endl;
 	for (i = 0; i < ceil(f->fsize) - 1; i++)
 	{
 		//1 means allcoated to one file
 		block[empty_block_begin]->content = 1;
-		empty_block_begin=block[empty_block_begin]->next_no;
+		empty_block_begin = block[empty_block_begin]->next_no;
+		//cout << empty_block_begin << endl;
 	}
 	block[empty_block_begin]->content = 1;
-	block[empty_block_begin]->next_no = 0;
+	int q = empty_block_begin;
+
 	empty_block_begin = block[empty_block_begin]->next_no;
+	//cout << empty_block_begin << endl;
+	block[q]->next_no = 0;
+	Remain_M = Remain_M - ceil(f->fsize);
+	//cout << Remain_M << endl;
 	return;
 }
 
@@ -833,7 +1261,9 @@ void recover_index(File * f)
 void allocate_sequential(File * f)
 {
 	int i = 0;
-	f->phy_loc = empty_block_begin;
+	f->length = ceil(f->fsize) / BLOCKSIZE;
+
+
 	for (i = 0; i < ceil(f->fsize) - 1; i++)
 	{
 		//1 means allcoated to one file
@@ -849,6 +1279,8 @@ void allocate_sequential(File * f)
 
 
 //--------------------------顺序方式 end--------------------------------------
+
+
 
 
 
@@ -870,6 +1302,7 @@ Folder * Located(char position[])
 	{
 		if (position[i] == '/')
 		{
+
 			//判断磁盘
 			if (level == -1) {
 				if (strcmp(root, "D:") != 0)
@@ -892,13 +1325,24 @@ Folder * Located(char position[])
 					ptr = ptr->next;  //匹配文件夹的名字，不相等，则指向同目录的下一个
 				}
 				//找到该文件夹
+
 				if (strcmp(ptr->name, root) == 0)
 				{
-					//cout << level << "级目录为 ：" << root << endl;
-					ptr = ptr->in_folder;
+					//	cout << level << "级目录为 ：" << root << endl;
+					//	cout << (int)position[i+1] << endl;
+					if (ptr->in_folder != NULL && position[i + 1] != NULL) {
+						ptr = ptr->in_folder;
+					}
+					else
+					{
+						level++;
+						memset(root, 0, sizeof(root));
+						continue;
+					}
+
 				}
 				else {
-					//cout << "没有找到【" << root << "】目录，请检查输入路径是否正确！" << endl;
+					//	cout << "没有找到【" << root << "】目录，请检查输入路径是否正确！" << endl;
 					return NULL;
 				}
 			}
@@ -914,85 +1358,59 @@ Folder * Located(char position[])
 	}
 	if (position[i] == NULL)
 	{
-		cout << endl;
+
 		if (level == 1) {
 			return init_folder;
 		}
 		else
 		{
-			cout << ptr->name << endl;
-			return  ptr->return_to_pre;
+			return  ptr;       //->return_to_pre;
 		}
 	}
 }
 
 
 //打印当前文件目录结构，嵌套打印
-void Print(Folder * p1, File * p2)
+void Print(Folder * p1)//, File * p2)
 {
 	Folder * ptr1;
 	File * ptr2;
 	int m;
 
-	//目录下的文件夹不为空
-	for (; p1 != NULL;)
+	for (int m = 0; m < tab; m++)
 	{
-		for (m = 0; m < tab; m++)
-		{
-			cout << "	";        //一个缩进
-		}
-		cout << p1->name << endl;      //打印当前文件夹的名字
-
-									   //指向该文件夹里面的子文件
-		ptr1 = p1->in_folder;
-		ptr2 = p1->in_file;
-		if (ptr2 != NULL || ptr1 != NULL)
-		{
-			tab++;
-		}
-		for (; ptr2 != NULL; )
-		{
-
-			for (m = 0; m < tab; m++)
-			{
-				cout << "	";        //一个缩进
-			}
-			//打印文件夹里子文件的文件名
-			cout << ptr2->name << endl;
-			ptr2 = ptr2->next;
-		}
-		//打印文件夹里子文件夹，需要调用递归算法
-		if (ptr1 != NULL)
-		{
-			Print(ptr1, ptr2);
-		}
-		//打印根目录下的兄弟文件
-		tab--;
-		if (p1 != current_ptr) {
-			p1 = p1->next;
-		}
-		else {
-			break;
-		}
-
+		cout << "	";        //一个缩进
 	}
+	//打印文件夹的名字
+	cout << p1->name << endl;
+	//指向该文件夹里面的子文件
+	ptr1 = p1->in_folder;
+	ptr2 = p1->in_file;
 
-
+	if (ptr1 == NULL && ptr2 == NULL)
+	{
+		return;
+	}
+	if (ptr1 != NULL || ptr2 != NULL)
+	{
+		tab++;
+	}
 	//根目录下的文件不为空
-	for (; p2 != NULL;)
+	for (; ptr2 != NULL;)
 	{
 		for (int m = 0; m < tab; m++)
 		{
 			cout << "	";        //一个缩进
 		}
-		cout << p2->name << endl;
-		p2 = p2->next;
+		cout << ptr2->name << endl;
+		ptr2 = ptr2->next;
 	}
-
-	if (p1 == NULL && p2 == NULL)
+	for (; ptr1 != NULL;)
 	{
-		return;
+		Print(ptr1);
+		ptr1 = ptr1->next;
 	}
+	tab--;
 }
 
 //返回位置的函数
@@ -1025,9 +1443,9 @@ void print_current_ptr(Folder * ptr)
 	int i = 0;
 	char cname[20][30];
 
-	strcpy_s(current_locate,sizeof("D:"), "D:");
+	strcpy_s(current_locate, sizeof("D:"), "D:");
 	for (i = 0, m; m != NULL; i++) {
-		strcpy_s(cname[i],sizeof(m->name), m->name);
+		strcpy_s(cname[i], sizeof(m->name), m->name);
 		m = m->return_to_pre;
 	}
 	i--;
@@ -1260,7 +1678,8 @@ void Open(char arr[])
 	}
 
 	if (blank == 1) {
-		strcpy_s(lo,100, Located_change(current_locate));
+		//	cout << current_locate << endl;
+		strcpy(lo, Located_change(current_locate));
 	}
 
 	for (int i = 0; arr[i] != NULL; i++)
@@ -1286,14 +1705,14 @@ void Open(char arr[])
 			//t=2,判断第二段字符的路径
 			if (t == 2 && blank == 2)
 			{
-				strcpy_s(lo,100,Located_change(ch));
+				strcpy(lo, Located_change(ch));
 			}
 			//找到输入名字的文件并打开
 			memset(ch, 0, sizeof(ch));
 			j = 0;
 		}
 	}
-
+	//	cout << "lo :" << lo << endl;
 	Open_file(lo, ch);
 }
 
@@ -1317,6 +1736,7 @@ char * Located_change(char source[])
 			j++;
 		}
 	}
+	//	cout << "c  :"<<c << endl;
 	return c;
 }
 
@@ -1340,10 +1760,11 @@ void Open_file(char locate[], char name[])
 	*/
 	//	cout << locate << endl;
 	//	cout << name << endl;
-	//	value = ShellExecute(NULL, _T("open"), _T("1.txt"), NULL, _T("D:/我的电脑/操作系统/"), SW_SHOWNORMAL);
+
+	//	value = ShellExecute(NULL, TEXT("open"), TEXT("1.txt"), NULL, TEXT("D:/我的电脑/操作系统"), SW_SHOWNORMAL);
 
 
-//	value = ShellExecute(NULL, _T("open"), wstr2, NULL, wstr1, SW_SHOWNORMAL);
+	value = ShellExecute(NULL, TEXT("open"), wstr2, NULL, wstr1, SW_SHOWNORMAL);
 
 	if ((int)value == 0) { cout << "内存不足。" << endl; }
 	else if ((int)value == 2) { cout << "文件名错误。" << endl; }
@@ -1491,7 +1912,7 @@ void demo() {
 
 
 	//---------Andemund------------
-
+	current_ptr = init_folder;
 	Fsize(init_folder);
 	return;
 }
@@ -1531,6 +1952,7 @@ void Order_by_size(char arr[])
 
 	char ch[100];    //用来分段存储字符
 	int j = 0, t = 0;
+	memset(ch, 0, sizeof(ch));
 	for (int i = 0; arr[i] != NULL; i++)
 	{
 		if (arr[i] != ' ') {
@@ -1542,19 +1964,19 @@ void Order_by_size(char arr[])
 			t++;
 			if (t == 1) {
 				if (strcmp(ch, "-order") != 0) {
-					cout << "命令格式错误。" << endl;
+					cout << "命令格式错误1。" << endl;
 					return;
 				}
 			}
 			if (t == 2) {
 				if (strcmp(ch, "by") != 0) {
-					cout << "命令格式错误。" << endl;
+					cout << "命令格式错误2。" << endl;
 					return;
 				}
 			}
 			if (t == 3) {
 				if (strcmp(ch, "size") != 0) {
-					cout << "命令格式错误。" << endl;
+					cout << "命令格式错误3。" << endl;
 					return;
 				}
 			}
